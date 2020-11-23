@@ -1,12 +1,14 @@
-# Микросервис для скачивания файлов
+# Microservice for downloading files
 
-Микросервис помогает работе основного сайта, сделанного на CMS и обслуживает
-запросы на скачивание архивов с файлами. Микросервис не умеет ничего, кроме упаковки файлов
-в архив. Закачиваются файлы на сервер через FTP или админку CMS.
+Microservice helps the work of the main site, that is based on CMS and maintains requests for downloading archives with files.
+This service can't do anything but pack files in the archive. Upload files to the server is possible via FTP or CMS.
 
-Создание архива происходит на лету по запросу от пользователя. Архив не сохраняется на диске, вместо этого по мере упаковки он сразу отправляется пользователю на скачивание.
+The ZIP archive is created on the fly on the user's request.
+Archives are not saved on the disk; instead, during the compression process binary data is sent in chunks to the user for download.
 
-От неавторизованного доступа архив защищен хешом в адресе ссылки на скачивание, например: `http://host.ru/archive/3bea29ccabbbf64bdebcc055319c5745/`. Хеш задается названием каталога с файлами, выглядит структура каталога так:
+You can get an archive of the directory with all files inside for download by the hash name of this directory.
+For example, `http://host.ru/archive/3bea29ccabbbf64bdebcc055319c5745/`.
+The structure of files for download is following:
 
 ```
 - photos
@@ -19,36 +21,30 @@
       - 2.jpg
 ```
 
+## Requirements
 
-## Как установить
+- [docker](https://docs.docker.com/get-docker/)
+- [docker-compose](https://docs.docker.com/compose/install/)
 
-Для работы микросервиса нужен Python версии не ниже 3.6.
-
-```bash
-pip install -r requirements.txt
-```
-
-## Как запустить
+## How to start the service
 
 ```bash
-python server.py
+docker-compose up --build
 ```
 
-Сервер запустится на порту 8080, чтобы проверить его работу перейдите в браузере на страницу [http://127.0.0.1:8080/](http://127.0.0.1:8080/).
+The server will be running on 8080 port, you can check it out [http://0.0.0.0:8080/](http://0.0.0.0:8080/).
 
-## Как развернуть на сервере
+## Config
 
-```bash
-python server.py
-```
+The project can be configured via `.env` file.
 
-После этого перенаправить на микросервис запросы, начинающиеся с `/archive/`. Например:
+**LOGGING** - enables logging. Possible values are: 0, 1. By default, is enabled.
+**INTERVAL_SECS** - limits download speed. Throttling. By default the interval is `0.5`secs.
+**PHOTOS_DIR_PATH** - The path of photos directory. By default is `test_photos`.
+**CHUNK_SIZE_KB** - the size of data chunk in Kb that will be sent to the user. By default is `250`Kb.
 
-```
-GET http://host.ru/archive/3bea29ccabbbf64bdebcc055319c5745/
-GET http://host.ru/archive/af1ad8c76fda2e48ea9aed2937e972ea/
-```
+In the result, by default the download speed is limited to 500kb/sec.
 
-# Цели проекта
+## More info
 
-Код написан в учебных целях — это урок в курсе по Python и веб-разработке на сайте [Devman](https://dvmn.org).
+This is an educational project.
