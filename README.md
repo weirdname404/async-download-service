@@ -1,14 +1,13 @@
 # Microservice for downloading files
 
-Microservice helps the work of the main site, that is based on CMS and maintains requests for downloading archives with files.
-This service can't do anything but pack files in the archive. Upload files to the server is possible via FTP or CMS.
+This microservice is designed to support main CMS platform by maintaining requests for downloading archives with files.
+This service can't do anything but pack files in the archive and send it in chunks to the user.
+Uploading files to the server is only possible via FTP or CMS.
 
 The ZIP archive is created on the fly on the user's request.
 Archives are not saved on the disk; instead, during the compression process binary data is sent in chunks to the user for download.
 
-You can get an archive of the directory with all files inside for download by the hash name of this directory.
-For example, `http://host.ru/archive/3bea29ccabbbf64bdebcc055319c5745/`.
-The structure of files for download is following:
+The structure of files for download on the server is following:
 
 ```
 - photos
@@ -21,6 +20,10 @@ The structure of files for download is following:
       - 2.jpg
 ```
 
+You can download an archive of the directory with all files inside by providing the hash name of this directory in GET request.
+
+For example, `http://HOSTNAME.com/archive/3bea29ccabbbf64bdebcc055319c5745/`.
+
 ## Requirements
 
 - [docker](https://docs.docker.com/get-docker/)
@@ -28,22 +31,27 @@ The structure of files for download is following:
 
 ## How to start the service
 
-```bash
-docker-compose up --build
-```
+After all requirements are successfully installed on your machine, you can fire up the project.
 
-The server will be running on 8080 port, you can check it out [http://0.0.0.0:8080/](http://0.0.0.0:8080/).
+```bash
+docker-compose up
+```
+This command will start the docker container with running server listening to `8080` port.
+You can check it out [http://0.0.0.0:8080/](http://0.0.0.0:8080/).
 
 ## Config
 
 The project can be configured via `.env` file.
 
 **LOGGING** - enables logging. Possible values are: 0, 1. By default, is enabled.
+
 **INTERVAL_SECS** - limits download speed. Throttling. By default the interval is `0.5`secs.
+
 **PHOTOS_DIR_PATH** - The path of photos directory. By default is `test_photos`.
+
 **CHUNK_SIZE_KB** - the size of data chunk in Kb that will be sent to the user. By default is `250`Kb.
 
-In the result, by default the download speed is limited to 500kb/sec.
+In the result, the download speed is limited to 500kb/sec by default.
 
 ## More info
 
