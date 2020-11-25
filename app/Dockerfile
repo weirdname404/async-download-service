@@ -8,5 +8,3 @@ RUN  pip install -r /tmp/requirements.txt
 
 WORKDIR /app/
 COPY . .
-
-# RUN ["python", "server.py"]
