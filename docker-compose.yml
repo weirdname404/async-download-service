@@ -3,7 +3,6 @@ version: "3"
 services:
   web_app:
     container_name: async-download-service
-    env_file: .env
     build:
       context: app/
       dockerfile: Dockerfile
@@ -14,4 +13,4 @@ services:
     command: python server.py
     volumes:
       - ./app:/app
-      - ./$PHOTOS_DIR_PATH/:/app/$PHOTOS_DIR_PATH/
+      - ./test_photos/:/app/test_photos/
