@@ -28,22 +28,31 @@ The structure of files for download is following:
 
 ## How to start the service
 
+You can start the service with the default settings.
+
 ```bash
-docker-compose up --build
+docker-compose up
 ```
 
 The server will be running on 8080 port, you can check it out [http://0.0.0.0:8080/](http://0.0.0.0:8080/).
 
+Note: By default, the download speed is limited to 500kb/sec.
+
 ## Config
 
-The project can be configured via `.env` file.
+The project can be configured via `.env` file. Just create it and setup ENV VARS there.
 
 **LOGGING** - enables logging. Possible values are: 0, 1. By default, is enabled.
 **INTERVAL_SECS** - limits download speed. Throttling. By default the interval is `0.5`secs.
 **PHOTOS_DIR_PATH** - The path of photos directory. By default is `test_photos`.
 **CHUNK_SIZE_KB** - the size of data chunk in Kb that will be sent to the user. By default is `250`Kb.
 
-In the result, by default the download speed is limited to 500kb/sec.
+After you've finished with your custom configuration, start the project using special `docker-compose.env.yml`
+that will pick up your new `.env` file.
+
+```bash
+docker-compose down && docker-compose -f docker-compose.env.yml up
+```
 
 ## More info
 
