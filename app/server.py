@@ -2,31 +2,34 @@ import aiofiles
 import asyncio
 import logging
 import os
-from aiohttp import web
+from typing import Coroutine
+from contextlib import suppress
+from aiohttp import web, web_request, web_response
 
-LOGGING = bool(int(os.getenv("LOGGING")))
-PHOTOS_DIR_PATH = os.getenv("PHOTOS_DIR_PATH")
-INTERVAL_SECS = float(os.getenv('INTERVAL_SECS'))
-CHUNK_SIZE_KB = int(os.getenv("CHUNK_SIZE_KB"))
+# settings
+LOGGING = bool(int(os.getenv("LOGGING", 1)))
+PHOTOS_DIR_PATH = os.getenv("PHOTOS_DIR_PATH", 'test_photos')
+INTERVAL_SECS = float(os.getenv('INTERVAL_SECS', 0.5))
+CHUNK_SIZE_KB = int(os.getenv("CHUNK_SIZE_KB", 250))
+CHUNK_SIZE_B = CHUNK_SIZE_KB * 1000
 
-if LOGGING:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="\n%(asctime)s %(levelname)s: %(message)s",
-        datefmt="%H:%M:%S",
-    )
+logger = logging.getLogger(__name__)
 
 
-async def send_archive(request):
-    """- Handles request;
+async def send_archive(request: web_request.Request) -> Coroutine:
+    """Coroutine that sends file archive as a response to the user's request.
+
+    What it does:
+       - Handles request;
        - Checks directory path;
        - Prepares headers;
-       - Streams compression."""
+       - Streams compression.
+    """
     archive_hash = request.match_info.get('archive_hash')
     if archive_hash is None:
         raise web.HTTPBadRequest(reason="Archive hash was not provided.")
 
-    if os.path.exists(f"{PHOTOS_DIR_PATH}/{archive_hash}") is False:
+    if not os.path.exists(f"{PHOTOS_DIR_PATH}/{archive_hash}"):
         raise web.HTTPNotFound(reason="Archive does not exist or was deleted.")
 
     response = web.StreamResponse()
@@ -41,50 +44,58 @@ async def send_archive(request):
     return response
 
 
-async def handle_index_page(request):
+async def handle_index_page(request: web_request.Request) -> Coroutine:
     async with aiofiles.open('index.html', mode='r') as index_file:
         index_contents = await index_file.read()
     return web.Response(text=index_contents, content_type='text/html')
 
 
-async def _compress_and_stream(dirname, response,
-                               chunk_size=CHUNK_SIZE_KB * 1000):
-    """Spawns subprocess that compresses given directory and sends
-       bytes of the result by chunks."""
+async def _compress_and_stream(dirname: str,
+                               response: web_response.StreamResponse,
+                               chunk_size: int = CHUNK_SIZE_B) -> Coroutine:
+    """Support coroutine that streams files compression.
+
+    It spawns a subprocess that compresses the given directory and sends
+    bytes of the result by chunks as a response to the user's request.
+    """
     # change CWD and compress recursively specific photo directory
     cmd = f"cd {PHOTOS_DIR_PATH} && zip -r - {dirname}"
-    proc = await asyncio.create_subprocess_shell(
-        cmd, stdout=asyncio.subprocess.PIPE
-    )
     try:
+        proc = await asyncio.create_subprocess_shell(
+           cmd, stdout=asyncio.subprocess.PIPE
+        )
         while True:
             if proc.stdout.at_eof():
                 break
             # read 250kb by default from the buffer
             data = await proc.stdout.read(chunk_size)
-            logging.info(f"Sending {dirname} archive chunk ...")
+            logger.info(f"Sending {dirname} archive chunk ...")
             await response.write(data)
             # network throttling
             await asyncio.sleep(INTERVAL_SECS)
-        logging.info("Download is completed.")
+        logger.info("Download is completed.")
 
-    # handle errors to kill subprocesses
-    except (SystemExit, Exception, RuntimeError):
-        raise
     except asyncio.CancelledError:
-        logging.info("Download was interrupted.")
+        logger.info("Download was interrupted.")
+        raise
     finally:
         # prevent process leak
-        try:
+        # if the process doesn't exist anymore - OSError will be raised
+        with suppress(OSError):
             proc.kill()
             await proc.communicate()
-            logging.info(f"Zip process {proc.pid} was killed.")
-        # the process doesn't exists anymore
-        except OSError:
-            pass
+            logger.info(f"Zip process {proc.pid} was killed.")
 
 
 if __name__ == '__main__':
+    # logging setup
+    logging.basicConfig(
+        format="\n%(asctime)s %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    if LOGGING:
+        logger.setLevel(logging.INFO)
+    # web app setup
     app = web.Application()
     app.add_routes([
         web.get('/', handle_index_page),
