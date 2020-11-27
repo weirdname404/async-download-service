@@ -59,11 +59,12 @@ async def _compress_and_stream(dirname: str,
     bytes of the result by chunks as a response to the user's request.
     """
     # change CWD and compress recursively specific photo directory
-    cmd = f"cd {PHOTOS_DIR_PATH} && zip -r - {dirname}"
+    proc = await asyncio.create_subprocess_exec(
+        'zip', '-r', '-', dirname,
+        cwd=PHOTOS_DIR_PATH,
+        stdout=asyncio.subprocess.PIPE
+    )
     try:
-        proc = await asyncio.create_subprocess_shell(
-           cmd, stdout=asyncio.subprocess.PIPE
-        )
         while True:
             if proc.stdout.at_eof():
                 break
